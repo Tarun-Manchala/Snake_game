@@ -8,31 +8,33 @@
 #define MAXFRAMEX 119
 #define MAXFRAMEY 29
 
-class Point {
+class GameObject {
+public:
+    virtual void Draw() = 0;
+    virtual void Erase() = 0;
+    virtual ~GameObject() {}
+};
+
+class Point : public GameObject {
 private:
     int x;
     int y;
 
 public:
-    Point() {
-        x = y = 10;
-    }
+    Point() : x(10), y(10) {}
 
-    Point(int x, int y) {
-        this->x = x;
-        this->y = y;
-    }
+    Point(int x, int y) : x(x), y(y) {}
 
     void SetPoint(int x, int y) {
         this->x = x;
         this->y = y;
     }
 
-    int GetX() {
+    int GetX() const {
         return x;
     }
 
-    int GetY() {
+    int GetY() const {
         return y;
     }
 
@@ -60,11 +62,15 @@ public:
             x = 0;
     }
 
-    void Draw(char ch = 'O') {
+    void Draw() override {
+        mvaddch(y, x, 'O');
+    }
+
+    void Draw(char ch) {
         mvaddch(y, x, ch);
     }
 
-    void Erase() {
+    void Erase() override {
         mvaddch(y, x, ' ');
     }
 
@@ -73,17 +79,30 @@ public:
         p->y = y;
     }
 
-    int IsEqual(Point* p) {
+    bool IsEqual(const Point* p) const {
         return p->x == x && p->y == y;
     }
 };
 
-class Snake {
+class Fruit : public Point {
+public:
+    Fruit() : Point(rand() % MAXFRAMEX, rand() % MAXFRAMEY) {}
+
+    void Relocate() {
+        SetPoint(rand() % MAXFRAMEX, rand() % MAXFRAMEY);
+    }
+
+    void Draw() override {
+        mvaddch(GetY(), GetX(), '#');
+    }
+};
+
+class Snake : public GameObject {
 private:
     Point* cell[MAXSNAKESIZE];
     int size;
     char dir;
-    Point fruit;
+    Fruit fruit;
     int state;
     int started;
     int blink;
@@ -115,17 +134,17 @@ private:
     }
 
 public:
-    Snake() {
-        size = 1;
+    Snake() : size(1), dir('l'), state(0), started(0), blink(0), score(0) {
         cell[0] = new Point(20, 20);
         for (int i = 1; i < MAXSNAKESIZE; i++) {
-            cell[i] = NULL;
+            cell[i] = nullptr;
         }
-        fruit.SetPoint(rand() % MAXFRAMEX, rand() % MAXFRAMEY);
-        state = 0;
-        started = 0;
-        blink = 0;
-        score = 0;
+    }
+
+    ~Snake() {
+        for (int i = 0; i < MAXSNAKESIZE; i++) {
+            delete cell[i];
+        }
     }
 
     void WelcomeScreen() {
@@ -153,7 +172,7 @@ public:
         printw("\n 's' to move bottom.");
     }
 
-    int get_score(){
+    int get_score() const {
         return score;
     }
 
@@ -204,7 +223,7 @@ public:
 
         if (fruit.GetX() == cell[0]->GetX() && fruit.GetY() == cell[0]->GetY()) {
             AddCell(0, 0);
-            fruit.SetPoint(rand() % MAXFRAMEX, rand() % MAXFRAMEY);
+            fruit.Relocate();
             score++;
         }
 
@@ -215,7 +234,7 @@ public:
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(2));
         if (!blink)
-            fruit.Draw('#');
+            fruit.Draw();
         blink = !blink;
         attroff(COLOR_PAIR(2));
 
@@ -245,6 +264,9 @@ public:
         if (dir != 'a')
             dir = 'd';
     }
+
+    void Draw() override {}
+    void Erase() override {}
 };
 
 int main() {
